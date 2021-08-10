@@ -476,7 +476,6 @@ export class VkPuppet {
 		}
 	}
 
-
 	public async handleMatrixFile(
 		room: IRemoteRoom,
 		data: IFileEvent,
@@ -559,7 +558,7 @@ export class VkPuppet {
 
 	public async handleMatrixRead(
 		room: IRemoteRoom,
-		eventId: string
+		eventId: string,
 	) {
 		const p = this.puppets[room.puppetId];
 		if (!p) {
@@ -703,7 +702,7 @@ export class VkPuppet {
 						break;
 
 					case AttachmentType.WALL:
-						rendered = await this.renderWallPost(puppetId, f)
+						rendered = await this.renderWallPost(puppetId, f);
 						await this.puppet.sendMessage(params, {
 							body: rendered,
 							formattedBody: this.converter.makeHtml(rendered),
@@ -711,7 +710,7 @@ export class VkPuppet {
 						break;
 
 					case AttachmentType.WALL_REPLY:
-						rendered = await this.renderWallPost(puppetId, f)
+						rendered = await this.renderWallPost(puppetId, f);
 						await this.puppet.sendMessage(params, {
 							body: rendered,
 							formattedBody: this.converter.makeHtml(rendered),
@@ -851,11 +850,11 @@ export class VkPuppet {
 				});
 			}
 			if (post.copy_history !== undefined && post.copy_history !== 0) {
-				const subpost = await this.renderWallPost(puppetId, { wall: post.copy_history[0] })
+				const subpost = await this.renderWallPost(puppetId, { wall: post.copy_history[0] });
 				subpost.split("\n").forEach((element) => {
 					formatted += `> ${element}\n`;
 				});
-			};
+			}
 
 			return formatted;
 		};
