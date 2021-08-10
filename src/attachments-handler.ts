@@ -239,6 +239,12 @@ export class AttachmentsHandler {
 						case AttachmentType.LINK:
 							formatted += `> 🔗 [ ${attachment["title"] ? attachment["title"] : attachment["url"]} ](${attachment["url"]})\n`;
 							break;
+						case AttachmentType.WALL:
+							const wallpost = await vkPuppet.renderWallPost(puppetId, attachment);
+							formatted += wallpost.split("\n").forEach((element) => {
+								formatted += `> ${element}\n`;
+							});
+							break;
 						default:
 							formatted += `> ❓️ Unhandled attachment of type ${attachment.type}\n`;
 							break;

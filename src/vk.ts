@@ -418,6 +418,65 @@ export class VkPuppet {
 		}
 	}
 
+	public async handleMatrixAudio(
+		room: IRemoteRoom,
+		data: IFileEvent,
+		asUser: ISendingUser | null,
+		// tslint:disable-next-line: no-any
+		event: any,
+	) {
+		const p = this.puppets[room.puppetId];
+		if (!p) {
+			return;
+		}
+		const MAXFILESIZE = 50000000;
+		const size = data.info ? data.info.size || 0 : 0;
+
+		if (size < MAXFILESIZE) {
+			try {
+				const attachment = await p.client.upload.audioMessage({
+					peer_id: Number(room.roomId),
+					source: {
+						value: data.url,
+						filename: data.filename,
+					},
+				});
+				const response = await p.client.api.messages.send({
+					peer_id: Number(room.roomId),
+					random_id: new Date().getTime(),
+					message: asUser ? `${asUser.displayname} sent an audio message:` : undefined,
+					attachment: [`doc${attachment.ownerId}_${attachment.id}`],
+				});
+				await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
+			} catch (err) {
+				try {
+					const response = await p.client.api.messages.send({
+						peer_ids: Number(room.roomId),
+						message: `Audio message ${data.filename} was sent, but VK refused to recieve it. You may download it there:\n${data.url}`,
+						random_id: new Date().getTime(),
+					});
+					await this.puppet.eventSync.insert(room, data.eventId!,
+						p.data.isUserToken ? response[0]["message_id"].toString() : response[0]["conversation_message_id"].toString());
+				} catch (err) {
+					log.error("Error sending to vk", err.error || err.body || err);
+				}
+			}
+		} else {
+			try {
+				const response = await p.client.api.messages.send({
+					peer_ids: Number(room.roomId),
+					message: `File ${data.filename} was sent, but it is too big for VK. You may download it there:\n${data.url}`,
+					random_id: new Date().getTime(),
+				});
+				await this.puppet.eventSync.insert(room, data.eventId!,
+					p.data.isUserToken ? response[0]["message_id"].toString() : response[0]["conversation_message_id"].toString());
+			} catch (err) {
+				log.error("Error sending to vk", err.error || err.body || err);
+			}
+		}
+	}
+
+
 	public async handleMatrixFile(
 		room: IRemoteRoom,
 		data: IFileEvent,
@@ -476,8 +535,6 @@ export class VkPuppet {
 		}
 	}
 
-	// Never called on my server for some reason, but
-	// if being called, should work
 	public async handleMatrixTyping(
 		room: IRemoteRoom,
 		typing: boolean,
@@ -497,6 +554,24 @@ export class VkPuppet {
 			} catch (err) {
 				log.error("Error sending typing presence to vk", err.error || err.body || err);
 			}
+		}
+	}
+
+	public async handleMatrixRead(
+		room: IRemoteRoom,
+		eventId: string
+	) {
+		const p = this.puppets[room.puppetId];
+		if (!p) {
+			return null;
+		}
+		try {
+			const response = await p.client.api.messages.markAsRead({
+				peer_id: Number(room.roomId),
+				start_message_id: Number(eventId),
+			});
+		} catch (err) {
+			log.error("Error sending read event to vk", err.error || err.body || err);
 		}
 	}
 
@@ -599,6 +674,7 @@ export class VkPuppet {
 				: context.attachments;
 
 			for (const f of attachments) {
+				let rendered: string;
 				switch (f.type) {
 					case AttachmentType.PHOTO:
 						await attachmentHandler.handlePhotoAttachment(params, f);
@@ -627,14 +703,18 @@ export class VkPuppet {
 						break;
 
 					case AttachmentType.WALL:
+						rendered = await this.renderWallPost(puppetId, f)
 						await this.puppet.sendMessage(params, {
-							body: await this.renderWallPost(puppetId, f),
+							body: rendered,
+							formattedBody: this.converter.makeHtml(rendered),
 						});
 						break;
 
 					case AttachmentType.WALL_REPLY:
+						rendered = await this.renderWallPost(puppetId, f)
 						await this.puppet.sendMessage(params, {
-							body: await this.renderWallPost(puppetId, f),
+							body: rendered,
+							formattedBody: this.converter.makeHtml(rendered),
 						});
 						break;
 
@@ -741,7 +821,7 @@ export class VkPuppet {
 		};
 
 		const renderWallPostAsUser = async () => {
-			const user = await this.getRemoteUser(puppetId, Number(post.fromId));
+			const user = await this.getRemoteUser(puppetId, Number(post.wall.ownerId));
 			let formatted = `Forwarded post from [${user.name}](${user.externalUrl})\n`;
 			post = post.wall;
 			post.text?.split("\n").forEach((element) => {
@@ -770,6 +850,13 @@ export class VkPuppet {
 					}
 				});
 			}
+			if (post.copy_history !== undefined && post.copy_history !== 0) {
+				const subpost = await this.renderWallPost(puppetId, { wall: post.copy_history[0] })
+				subpost.split("\n").forEach((element) => {
+					formatted += `> ${element}\n`;
+				});
+			};
+
 			return formatted;
 		};
 

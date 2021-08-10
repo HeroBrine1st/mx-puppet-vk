@@ -48,6 +48,7 @@ if (options.help) {
 const protocol: IProtocolInformation = {
 	features: {
 		image: true,
+		audio: true,
 		file: true,
 		presence: true,
 		reply: true,
@@ -93,9 +94,11 @@ async function run() {
 	puppet.on("redact", vk.handleMatrixRedact.bind(vk));
 	puppet.on("reply", vk.handleMatrixReply.bind(vk));
 	puppet.on("image", vk.handleMatrixImage.bind(vk));
+	puppet.on("audio", vk.handleMatrixAudio.bind(vk));
 	puppet.on("file", vk.handleMatrixFile.bind(vk));
 
 	puppet.on("typing", vk.handleMatrixTyping.bind(vk));
+	puppet.on("read", vk.handleMatrixRead.bind(vk));
 
 	puppet.setCreateRoomHook(vk.createRoom.bind(vk));
 	puppet.setGetUserIdsInRoomHook(vk.getUserIdsInRoom.bind(vk));

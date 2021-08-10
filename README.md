@@ -29,7 +29,7 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [x] Replies
     - [x] Typing notifs - [see note](#Note-on-presence-from-matrix-side)
     - [ ] Presence - ~~not possible yet~~
-    - [ ] Read notifications - ~~not possible yet~~
+    - [x] Read notifications
     - [x] Message edits
     - [x] Message redacts - works as edit, real redact unavailable without being admin in chat
     - [ ] Initiate rooms from the matrix side
@@ -108,12 +108,12 @@ where the access token is `df89482ba9a19e5a2dee85031612b021a08cd521115e1c7d2cd70
 - Matrix -> VK (AS A USER)
     - [x] Text content
     - [x] Image content
-    - [x] Audio/Video content
+    - [x] Audio messages
     - [x] Other files
     - [x] Replies
     - [x] Typing notifs
     - [ ] Presence
-    - [ ] Read notifications
+    - [x] Read notifications
     - [x] Message edits
     - [x] Message redacts - in 24 hours
     - [ ] Initiate rooms from the matrix side
@@ -163,7 +163,7 @@ npm run build
     - [x] Ответы
     - [x] Индикатор печати - [смотрите примечание](#примечание-о-эфемерных-событиях)
     - [ ] Индикатор "в сети"
-    - [ ] Индикаторы прочтения
+    - [x] Индикаторы прочтения
     - [x] Редактирование сообщений
     - [x] Удаление сообщений - работает как редактирование
     - [ ] Инициация чатов со стороны Matrix
@@ -239,12 +239,12 @@ https://oauth.vk.com/blank.html#access_token=df89482ba9a19e5a2dee85031612b021a08
 - Matrix -> Вконтакте (как пользователь)
     - [x] Текстовые сообщения
     - [x] Изображения
-    - [x] Аудио и видео
+    - [x] Аудио сообщения
     - [x] Прочие файлы
     - [x] Ответы
     - [x] Индикатор печати
     - [ ] Индикатор "в сети"
-    - [ ] Индикаторы прочтения
+    - [x] Индикаторы прочтения
     - [x] Редактирование сообщений
     - [x] Удаление сообщений - в течении 24 часов
     - [ ] Инициация чатов со стороны Matrix
