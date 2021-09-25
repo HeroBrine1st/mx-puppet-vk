@@ -639,7 +639,7 @@ export class VkPuppet {
 		}
 
 		if (context.hasReplyMessage) {
-			if (this.puppet.eventSync.getMatrix(params.room, context.replyMessage!.id.toString())) {
+			if (await this.puppet.eventSync.getMatrix(params.room, context.replyMessage!.id.toString())) {
 				const opts: IMessageEvent = {
 					body: msgText || "Attachment",
 					formattedBody: this.converter.makeHtml(msgText),
