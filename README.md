@@ -9,6 +9,8 @@ This is a Matrix <-> VK bridge based on [mx-puppet-bridge](https://github.com/So
 
 It is in early development. Right now it logs message data when log level includes "info" level.
 
+While there were no commits in a long time, this bridge still works. Pull requests are welcome.
+
 Relay mode works too, but we don't recommend it.
 
 ## Installation
