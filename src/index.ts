@@ -1,10 +1,8 @@
 // first we import needed stuffs
 import {
 	PuppetBridge,
-	IPuppetBridgeRegOpts,
 	Log,
 	IRetData,
-	Util,
 	IProtocolInformation,
 } from "mx-puppet-bridge";
 import * as commandLineArgs from "command-line-args";

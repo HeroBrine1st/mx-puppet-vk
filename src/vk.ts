@@ -6,20 +6,14 @@ import {
 	IRemoteRoom,
 	IMessageEvent,
 	IFileEvent,
-	MessageDeduplicator,
 	Log,
 	ISendingUser,
 } from "mx-puppet-bridge";
 
-import { VK, MessageContext, Context, AttachmentType, MessageForwardsCollection } from "vk-io";
-import { userInfo } from "os";
-import { runInThisContext } from "vm";
-import { lookup } from "dns";
+import { VK, MessageContext, AttachmentType } from "vk-io";
 import { Converter } from "showdown";
 import { MessagesMessage, MessagesMessageAttachment } from "vk-io/lib/api/schemas/objects";
-import { ElementFlags, OptionalTypeNode } from "typescript";
 import { AttachmentsHandler } from "./attachments-handler";
-import { debug } from "console";
 
 // here we create our log instance
 const log = new Log("VKPuppet:vk");
@@ -96,7 +90,7 @@ export class VkPuppet {
 		let response: IRemoteRoom;
 		if (info.items === undefined) {
 			// Idk how to get error code
-			throw new Error("info.items is undefined; maybe don't have access to this chat, chat does not exist or contact not found");
+			throw new Error("info.items is undefined; Perhaps don't have access to this chat, chat does not exist or contact not found");
 		}
 		switch (info.items[0].peer.type || "chat") {
 			case "user":
@@ -117,7 +111,7 @@ export class VkPuppet {
 					puppetId,
 					roomId: peerId.toString(),
 					name: info.items[0]?.chat_settings.title || `VK chat №${(peerId - 2000000000).toString()}`,
-					topic: info.count === 0 ? "To recieve chat name and avatar, puppet needs admin rights on VK side" : null,
+					topic: info.count === 0 ? "To receive chat name and avatar, puppet needs admin rights on VK side" : null,
 					avatarUrl: info.items[0]?.chat_settings.photo?.photo_200,
 				};
 				break;
@@ -192,7 +186,7 @@ export class VkPuppet {
 
 			client.updates.on("message_new", async (context) => {
 				try {
-					log.info("Recieved something!");
+					log.info("Received something!");
 					await this.handleVkMessage(puppetId, context);
 				} catch (err) {
 					log.error("Error handling vk message event", err.error || err.body || err);
@@ -200,7 +194,7 @@ export class VkPuppet {
 			});
 			client.updates.on("message_edit", async (context) => {
 				try {
-					log.info("Edit recieved!");
+					log.info("Edit received!");
 					await this.handleVkEdit(puppetId, context);
 				} catch (err) {
 					log.error("Error handling vk message event", err.error || err.body || err);
@@ -463,7 +457,7 @@ export class VkPuppet {
 				try {
 					const response = await p.client.api.messages.send({
 						peer_ids: Number(room.roomId),
-						message: `Audio message ${data.filename} was sent, but VK refused to recieve it. You may download it there:\n${data.url}`,
+						message: `Audio message ${data.filename} was sent, but VK refused to receive it. You may download it there:\n${data.url}`,
 						random_id: new Date().getTime(),
 					});
 					await this.puppet.eventSync.insert(room, data.eventId!,
@@ -521,7 +515,7 @@ export class VkPuppet {
 				try {
 					const response = await p.client.api.messages.send({
 						peer_ids: Number(room.roomId),
-						message: `File ${data.filename} was sent, but VK refused to recieve it. You may download it there:\n${data.url}`,
+						message: `File ${data.filename} was sent, but VK refused to receive it. You may download it there:\n${data.url}`,
 						random_id: new Date().getTime(),
 					});
 					await this.puppet.eventSync.insert(room, data.eventId!,
