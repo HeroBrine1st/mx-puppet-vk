@@ -78,7 +78,7 @@ export class VkPuppet {
 			};
 			return response;
 		} else {
-			const info = await p.client.api.users.get({ user_ids: userId.toString(), fields: ["photo_max", "screen_name"] });
+			const info = await p.client.api.users.get({ user_ids: [userId.toString()], fields: ["photo_max", "screen_name"] });
 			const response: IRemoteUser = {
 				puppetId,
 				userId: userId.toString(),
@@ -94,7 +94,11 @@ export class VkPuppet {
 		const p = this.puppets[puppetId];
 		const info = await p.client.api.messages.getConversationsById({ peer_ids: peerId, fields: ["photo_max"] });
 		let response: IRemoteRoom;
-		switch (info.items[0]?.peer.type || "chat") {
+		if (info.items === undefined) {
+			// Idk how to get error code
+			throw new Error("info.items is undefined; maybe don't have access to this chat, chat does not exist or contact not found");
+		}
+		switch (info.items[0].peer.type || "chat") {
 			case "user":
 				// tslint:disable-next-line: no-shadowed-variable
 				const userInfo = await p.client.api.users.get({ user_ids: info.items[0].peer.id, fields: ["photo_max"] });
@@ -147,7 +151,14 @@ export class VkPuppet {
 		const users = new Set<string>();
 		if (room.isDirect === false) {
 			const response = await p.client.api.messages.getConversationMembers({ peer_id: Number(room.roomId) });
+			if (response.items === undefined) {
+				throw new Error("Unknown error, maybe don't have access to the chat");
+			}
 			response.items.forEach((element) => {
+				if (element.member_id === undefined) {
+					// Vk docs says it's always defined, so..
+					throw new Error("NullPointerException");
+				}
 				users.add(element.member_id.toString());
 			});
 		}
