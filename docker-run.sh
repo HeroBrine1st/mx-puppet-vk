@@ -7,7 +7,7 @@ if [ ! -f "$CONFIG_PATH" ]; then
 	exit 1
 fi
 
-cmp --silent /opt/mx-puppet-vk/sample.config.yaml $CONFIG_PATH || (echo "Config file is the sample file, ignoring" && exit 1)
+cmp -s /opt/mx-puppet-vk/sample.config.yaml $CONFIG_PATH && (echo "Config file is the sample file, ignoring" && exit 1)
 
 args="$@"
 
