@@ -1,10 +1,5 @@
 FROM node:alpine AS builder
 
-WORKDIR /opt/mx-puppet-vk
-
-# run build process as user in case of npm pre hooks
-# pre hooks are not executed while running as root
-RUN chown node:node /opt/mx-puppet-vk
 RUN apk --no-cache add git python3 make g++ pkgconfig \
     build-base \
     cairo-dev \
@@ -17,30 +12,27 @@ RUN apk --no-cache add git python3 make g++ pkgconfig \
     libjpeg-turbo-dev \
     freetype-dev
 
-#RUN wget -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
-#    wget -O glibc-2.32-r0.apk https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.32-r0/glibc-2.32-r0.apk && \
-#    apk add glibc-2.32-r0.apk
-
-COPY package.json ./
-RUN chown node:node package.json
-
+# Run build process as a regular user in case of npm pre-hooks that aren't executed while running as root
 USER node
+WORKDIR /opt/mx-puppet-vk
+
+COPY --chown=node:node package.json .
+COPY --chown=node:node package-lock.json .
 
 RUN npm install
 
-COPY tsconfig.json ./
+COPY tsconfig.json .
 COPY src/ ./src/
 RUN npm run build
 
 
 FROM node:alpine
 
-VOLUME /data
-
 ENV CONFIG_PATH=/data/config.yaml \
-    REGISTRATION_PATH=/data/vk-registration.yaml
+    REGISTRATION_PATH=/data/vk-registration.yaml \
+    USER=node \
+    GROUP=node
 
-# su-exec is used by docker-run.sh to drop privileges
 RUN apk add --no-cache su-exec \
     cairo \
     jpeg \
@@ -55,10 +47,13 @@ RUN apk add --no-cache su-exec \
 
 WORKDIR /opt/mx-puppet-vk
 COPY docker-run.sh ./
+# Used by docker-run.sh
+COPY sample.config.yaml ./
 COPY --from=builder /opt/mx-puppet-vk/node_modules/ ./node_modules/
 COPY --from=builder /opt/mx-puppet-vk/build/ ./build/
 
 # change workdir to /data so relative paths in the config.yaml
 # point to the persisten volume
 WORKDIR /data
+VOLUME /data
 ENTRYPOINT ["/opt/mx-puppet-vk/docker-run.sh"]
