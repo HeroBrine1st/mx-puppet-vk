@@ -10,30 +10,19 @@ import {
 	ISendingUser,
 } from "mx-puppet-bridge";
 
+import { IPuppets } from "./puppet"
+
 import { VK, MessageContext, AttachmentType } from "vk-io";
 import { Converter } from "showdown";
 import { MessagesMessage, MessagesMessageAttachment } from "vk-io/lib/api/schemas/objects";
 import { AttachmentsHandler } from "./attachments-handler";
 
-// here we create our log instance
 const log = new Log("VKPuppet:vk");
 
-// this interface is to hold all data on a single puppet
-interface IEchoPuppet {
-	// this is usually a client class that connects to the remote protocol
-	// as we just echo back, unneeded in our case
-	client: VK;
-	// tslint:disable-next-line: no-any
-	data: any; // and let's keep a copy of the data associated with a puppet
-}
 
-// we can hold multiple puppets at once...
-interface IEchoPuppets {
-	[puppetId: number]: IEchoPuppet;
-}
 
 export class VkPuppet {
-	private puppets: IEchoPuppets = {};
+	private puppets: IPuppets = {};
 	private converter: Converter = new Converter({
 		simplifiedAutoLink: true,
 		excludeTrailingPunctuationFromURLs: true,
@@ -93,7 +82,7 @@ export class VkPuppet {
 			throw new Error("info.items is undefined; Perhaps don't have access to this chat, chat does not exist or contact not found");
 		}
 		switch (info.items[0].peer.type || "chat") {
-			case "user":
+			case "user": {
 				// tslint:disable-next-line: no-shadowed-variable
 				const userInfo = await p.client.api.users.get({ user_ids: info.items[0].peer.id, fields: ["photo_max"] });
 				response = {
@@ -105,7 +94,7 @@ export class VkPuppet {
 					externalUrl: `https://vk.com/id${info.items[0].peer.id}}`,
 				};
 				break;
-
+			}
 			case "chat":
 				response = {
 					puppetId,
@@ -116,7 +105,7 @@ export class VkPuppet {
 				};
 				break;
 
-			case "group":
+			case "group": {
 				const groupInfo = await p.client.api.groups.getById({ group_id: Math.abs(info.items[0].peer.id).toString() });
 				response = {
 					puppetId,
@@ -126,7 +115,7 @@ export class VkPuppet {
 					externalUrl: `https://vk.com/${groupInfo[0].screen_name}`,
 				};
 				break;
-
+			}
 			default:
 				response = {
 					puppetId,
@@ -485,8 +474,8 @@ export class VkPuppet {
 		room: IRemoteRoom,
 		data: IFileEvent,
 		asUser: ISendingUser | null,
-		// tslint:disable-next-line: no-any
-		event: any,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		event: unknown,
 	) {
 		const p = this.puppets[room.puppetId];
 		if (!p) {
@@ -542,8 +531,10 @@ export class VkPuppet {
 	public async handleMatrixTyping(
 		room: IRemoteRoom,
 		typing: boolean,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		asUser: ISendingUser | null,
-		event: any,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		event: unknown,
 	) {
 		if (typing) {
 			const p = this.puppets[room.puppetId];
@@ -764,7 +755,7 @@ export class VkPuppet {
 	public async prependReply(puppetId: number, body: string, reply: string, userid: string) {
 		const user = await this.getRemoteUser(puppetId, Number(userid));
 		const replySplitted = reply.split("\n");
-		let formatted: string = `> <${user.name}>\n`;
+		let formatted = `> <${user.name}>\n`;
 		replySplitted.forEach((element) => {
 			formatted += `> ${element}\n`;
 		});
@@ -774,7 +765,7 @@ export class VkPuppet {
 
 	public async stripReply(body: string) {
 		// tslint:disable-next-line: prefer-const
-		let splitted = body.split("\n");
+		const splitted = body.split("\n");
 		let isCitate = true;
 		while (isCitate) {
 			if (splitted[0].startsWith(">")) {
