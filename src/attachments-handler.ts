@@ -63,15 +63,15 @@ export class AttachmentsHandler {
     try {
       if (this.puppet.data.isUserToken) {
         await this.puppetBridge.sendFileDetect(
-          params, attachment["sticker"]["images_with_background"][4]["url"],
+          params, attachment["sticker"]["images_with_background"][2]["url"],
         );
       } else {
-        await this.puppetBridge.sendFileDetect(params, attachment["imagesWithBackground"][4]["url"]);
+        await this.puppetBridge.sendFileDetect(params, attachment["imagesWithBackground"][2]["url"]);
       }
 
     } catch (err) {
       const opts: IMessageEvent = {
-        body: `Sticker: ${attachment["imagesWithBackground"][4]["url"]}`,
+        body: `Sticker: ${attachment["imagesWithBackground"][2]["url"]}`,
       };
       await this.puppetBridge.sendMessage(params, opts);
     }
@@ -165,7 +165,7 @@ export class AttachmentsHandler {
               formatted += `> 🖼️ [Photo](${attachment["largeSizeUrl"]})\n`;
               break;
             case AttachmentType.STICKER:
-              formatted += `> 🖼️ [Sticker](${attachment["imagesWithBackground"][4]["url"]})\n`;
+              formatted += `> 🖼️ [Sticker](${attachment["imagesWithBackground"][2]["url"]})\n`;
               break;
             case AttachmentType.AUDIO_MESSAGE:
               formatted += `> 🗣️ [Audio message](${attachment["oggUrl"]})\n`;
