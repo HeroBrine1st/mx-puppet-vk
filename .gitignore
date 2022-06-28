@@ -5,3 +5,5 @@ build
 *.db
 *.log*
 *audit.json
+docker-compose.yml
+/data

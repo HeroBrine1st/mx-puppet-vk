@@ -16,6 +16,8 @@ import { VK, MessageContext, AttachmentType } from "vk-io";
 import { Converter } from "showdown";
 import { MessagesMessage, MessagesMessageAttachment } from "vk-io/lib/api/schemas/objects";
 import { AttachmentsHandler } from "./attachments-handler";
+import PollingTransport from "./PollingTransport"
+import { globalAgent } from "https";
 
 const log = new Log("VKPuppet:vk");
 
@@ -162,8 +164,6 @@ export class VkPuppet {
 
 	// tslint:disable-next-line: no-any
 	public async newPuppet(puppetId: number, data: any) {
-		// this is called when we need to create a new puppet
-		// the puppetId is the ID associated with that puppet and the data its data
 		if (this.puppets[puppetId]) {
 			// the puppet somehow already exists, delete it first
 			await this.deletePuppet(puppetId);
@@ -172,8 +172,19 @@ export class VkPuppet {
 		// and listen to incoming messages from it
 		try {
 			const client = new VK({ token: data.token, apiLimit: 20 });
+			const polling = new PollingTransport({
+				api: client.api,
+				ts: data.ts as number | undefined,
+				agent: globalAgent,
+				pollingWait: 3e3,
+				pollingRetryLimit: 3,
+				pollingGroupId: undefined,
+				webhookSecret: undefined,
+				webhookConfirmation: undefined,
+			})
 
 			client.updates.on("message_new", async (context) => {
+
 				try {
 					log.info("Received something!");
 					await this.handleVkMessage(puppetId, context);
@@ -214,11 +225,22 @@ export class VkPuppet {
 			this.puppets[puppetId] = {
 				client,
 				data,
+				polling
 			};
 			await this.puppet.setUserId(puppetId, data.id);
 			await this.puppet.setPuppetData(puppetId, data);
+			polling.subscribe(client.updates.handlePollingUpdate.bind(client.updates))
+			polling.subscribeToTsUpdates(async (ts) => {
+				data.ts = ts
+				try {
+					await this.puppet.setPuppetData(puppetId, data);
+				} catch (err) {
+					await this.puppet.sendStatusMessage(puppetId, `Failed to store puppet data: ${err}`);
+					log.error("Failed to store puppet data", err);
+				}
+			})
 			try {
-				await client.updates.start();
+				await polling.start()
 				await this.puppet.sendStatusMessage(puppetId, "Connected!");
 			} catch (err) {
 				await this.puppet.sendStatusMessage(puppetId, `Connection failed! ${err}`);
@@ -230,14 +252,12 @@ export class VkPuppet {
 	}
 
 	public async deletePuppet(puppetId: number) {
-		// this is called when we need to delte a puppet
 		const p = this.puppets[puppetId];
 		if (!p) {
-			// puppet doesn't exist, nothing to do
 			return;
 		}
-		await p.client.updates.stop();
-		delete this.puppets[puppetId]; // and finally delete our local copy
+		await p.polling.stop();
+		delete this.puppets[puppetId];
 	}
 
 	//////////////////////////
@@ -402,7 +422,7 @@ export class VkPuppet {
 			try {
 				const response = await p.client.api.messages.send({
 					peer_id: Number(room.roomId),
-					message: `File ${data.filename} was sent, but it is too big for VK. You may download it there:\n${data.url}`,
+					message: `File ${data.filename} was sent, but it is too big for VK. You can download it there:\n${data.url}`,
 					random_id: new Date().getTime(),
 				});
 				await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
@@ -446,7 +466,7 @@ export class VkPuppet {
 				try {
 					const response = await p.client.api.messages.send({
 						peer_ids: Number(room.roomId),
-						message: `Audio message ${data.filename} was sent, but VK refused to receive it. You may download it there:\n${data.url}`,
+						message: `Audio message ${data.filename} was sent, but VK refused to receive it. You can download it there:\n${data.url}`,
 						random_id: new Date().getTime(),
 					});
 					await this.puppet.eventSync.insert(room, data.eventId!,
@@ -459,7 +479,7 @@ export class VkPuppet {
 			try {
 				const response = await p.client.api.messages.send({
 					peer_ids: Number(room.roomId),
-					message: `File ${data.filename} was sent, but it is too big for VK. You may download it there:\n${data.url}`,
+					message: `File ${data.filename} was sent, but it is too big for VK. You can download it there:\n${data.url}`,
 					random_id: new Date().getTime(),
 				});
 				await this.puppet.eventSync.insert(room, data.eventId!,
@@ -504,7 +524,7 @@ export class VkPuppet {
 				try {
 					const response = await p.client.api.messages.send({
 						peer_ids: Number(room.roomId),
-						message: `File ${data.filename} was sent, but VK refused to receive it. You may download it there:\n${data.url}`,
+						message: `File ${data.filename} was sent, but VK refused to receive it. You can download it there:\n${data.url}`,
 						random_id: new Date().getTime(),
 					});
 					await this.puppet.eventSync.insert(room, data.eventId!,
@@ -517,7 +537,7 @@ export class VkPuppet {
 			try {
 				const response = await p.client.api.messages.send({
 					peer_ids: Number(room.roomId),
-					message: `File ${data.filename} was sent, but it is too big for VK. You may download it there:\n${data.url}`,
+					message: `File ${data.filename} was sent, but it is too big for VK. You can download it there:\n${data.url}`,
 					random_id: new Date().getTime(),
 				});
 				await this.puppet.eventSync.insert(room, data.eventId!,
