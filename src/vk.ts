@@ -646,7 +646,6 @@ export class VkPuppet {
 		}
 		if (context.hasForwards) {
 			if (fullContext !== undefined) {
-				const forwards = (await p.client.api.messages.getById({ message_ids: context.id, extended: 1 })).items[0]["fwd_messages"];
 				if (fullContext.fwd_messages !== undefined) {
 					try {
 						msgText = await attachmentHandler.handleForwardsAsUser(this, puppetId, msgText, params, fullContext.fwd_messages);
