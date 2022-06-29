@@ -21,7 +21,7 @@ import { globalAgent } from "https";
 
 const log = new Log("VKPuppet:vk");
 
-
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export class VkPuppet {
 	private puppets: IPuppets = {};
@@ -34,14 +34,10 @@ export class VkPuppet {
 	});
 	constructor(
 		private puppet: PuppetBridge,
-	) { }
+	) {}
 
 	public async getSendParams(puppetId: number, peerId: number, senderId: number, eventId?: string | undefined):
 		Promise<IReceiveParams> {
-		// we will use this function internally to create the send parameters
-		// needed to send a message, a file, reactions, ... to matrix
-		// log.info(`Creating send params for ${peerId}...`);
-
 		return {
 			room: await this.getRemoteRoom(puppetId, peerId),
 			user: await this.getRemoteUser(puppetId, senderId),
@@ -51,32 +47,49 @@ export class VkPuppet {
 
 	public async getRemoteUser(puppetId: number, userId: number): Promise<IRemoteUser> {
 		const p = this.puppets[puppetId];
-		// log.debug("User id:", userId, userId.toString());
+		if(p.userCache[userId] !== undefined) {
+			const cached = p.userCache[userId]
+			if(cached.deadline < Date.now()) {
+				log.debug(`Cache hit for user ${userId} (puppet ${puppetId})`)
+				return cached.value
+			}
+		}
+		let response: IRemoteUser
 		if (userId < 0) {
 			const info = await p.client.api.groups.getById({ group_id: Math.abs(userId).toString() });
-			const response: IRemoteUser = {
+			response = {
 				puppetId,
 				userId: userId.toString(),
 				name: info[0].name,
 				avatarUrl: info[0].photo_200,
 				externalUrl: `https://vk.com/${info[0].screen_name}`,
 			};
-			return response;
 		} else {
 			const info = await p.client.api.users.get({ user_ids: [userId.toString()], fields: ["photo_max", "screen_name"] });
-			const response: IRemoteUser = {
+			response = {
 				puppetId,
 				userId: userId.toString(),
 				name: `${info[0].first_name} ${info[0].last_name}`,
 				avatarUrl: info[0].photo_max,
 				externalUrl: `https://vk.com/${info[0].screen_name}`,
 			};
-			return response;
 		}
+		p.userCache[userId] = {
+			value: response,
+			deadline: Date.now() + CACHE_TTL_MS
+		}
+		return response
 	}
 
 	public async getRemoteRoom(puppetId: number, peerId: number): Promise<IRemoteRoom> {
 		const p = this.puppets[puppetId];
+		if(p.roomCache[peerId] !== undefined) {
+			const cached = p.roomCache[peerId]
+			if(cached.deadline < Date.now()) {
+				log.debug(`Cache hit for peer ${peerId} (puppet ${puppetId})`)
+				return cached.value
+			}
+		}
 		const info = await p.client.api.messages.getConversationsById({ peer_ids: peerId, fields: ["photo_max"] });
 		let response: IRemoteRoom;
 		if (info.items === undefined) {
@@ -85,7 +98,6 @@ export class VkPuppet {
 		}
 		switch (info.items[0].peer.type || "chat") {
 			case "user": {
-				// tslint:disable-next-line: no-shadowed-variable
 				const userInfo = await p.client.api.users.get({ user_ids: info.items[0].peer.id, fields: ["photo_max"] });
 				response = {
 					puppetId,
@@ -127,6 +139,10 @@ export class VkPuppet {
 				};
 				break;
 		}
+		p.roomCache[peerId] = {
+			value: response,
+			deadline: Date.now() + CACHE_TTL_MS
+		}
 		return response;
 	}
 
@@ -140,11 +156,8 @@ export class VkPuppet {
 				throw new Error("Unknown error, maybe don't have access to the chat");
 			}
 			response.items.forEach((element) => {
-				if (element.member_id === undefined) {
-					// Vk docs says it's always defined, so..
-					throw new Error("NullPointerException");
-				}
-				users.add(element.member_id.toString());
+				// VK documentation says member_id is always defined
+				users.add(element.member_id!.toString());
 			});
 		}
 		return users;
@@ -184,7 +197,6 @@ export class VkPuppet {
 			})
 
 			client.updates.on("message_new", async (context) => {
-
 				try {
 					log.info("Received something!");
 					await this.handleVkMessage(puppetId, context);
@@ -225,7 +237,9 @@ export class VkPuppet {
 			this.puppets[puppetId] = {
 				client,
 				data,
-				polling
+				polling,
+				roomCache: {},
+				userCache: {}
 			};
 			await this.puppet.setUserId(puppetId, data.id);
 			await this.puppet.setPuppetData(puppetId, data);
@@ -350,8 +364,7 @@ export class VkPuppet {
 		eventId: string,
 		data: IMessageEvent,
 		asUser: ISendingUser | null,
-		// tslint:disable-next-line: no-any
-		event: any,
+		event: unknown,
 	) {
 		const p = this.puppets[room.puppetId];
 		if (!p) {
@@ -383,8 +396,7 @@ export class VkPuppet {
 		room: IRemoteRoom,
 		data: IFileEvent,
 		asUser: ISendingUser | null,
-		// tslint:disable-next-line: no-any
-		event: any,
+		event: unknown,
 	) {
 		const p = this.puppets[room.puppetId];
 		if (!p) {
@@ -436,8 +448,7 @@ export class VkPuppet {
 		room: IRemoteRoom,
 		data: IFileEvent,
 		asUser: ISendingUser | null,
-		// tslint:disable-next-line: no-any
-		event: any,
+		event: unknown,
 	) {
 		const p = this.puppets[room.puppetId];
 		if (!p) {
@@ -611,7 +622,7 @@ export class VkPuppet {
 		}
 
 		log.debug("Received new message!", context);
-
+		
 		if (context.isOutbox) {
 			return; // Deduping
 		}
