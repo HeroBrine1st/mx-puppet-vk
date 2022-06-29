@@ -759,14 +759,11 @@ export class VkPuppet {
 			return;
 		}
 		log.info(context);
-		// As VK always sends edit as outbox, we won't work with any edits from groups
-		if (!p.data.isUserToken && context.senderType === "group") {
-			return; // Deduping
-		}
 
-		// With users it works ok
-		if (p.data.isUserToken && context.isOutbox === true) {
-			return; // Deduping
+		// Ignore group edit if puppet is group
+		// Else ignore outcoming edits
+		if(p.data.isUserToken ? context.isOutbox : context.senderType === "group") {
+			return // Deduping
 		}
 
 		const params = await this.getSendParams(puppetId, context.peerId, context.senderId, context.id.toString());
