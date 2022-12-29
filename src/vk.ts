@@ -96,7 +96,7 @@ export class VkPuppet {
 			// Idk how to get error code
 			throw new Error("info.items is undefined; Perhaps don't have access to this chat, chat does not exist or contact not found");
 		}
-		switch (info.items[0].peer.type || "chat") {
+		switch (info.items[0].peer.type) {
 			case "user": {
 				const userInfo = await p.client.api.users.get({ user_ids: info.items[0].peer.id, fields: ["photo_max"] });
 				response = {
@@ -116,6 +116,7 @@ export class VkPuppet {
 					name: info.items[0]?.chat_settings.title || `VK chat №${(peerId - 2000000000).toString()}`,
 					topic: info.count === 0 ? "To receive chat name and avatar, puppet needs admin rights on VK side" : null,
 					avatarUrl: info.items[0]?.chat_settings.photo?.photo_200,
+					isDirect: false
 				};
 				break;
 
@@ -127,6 +128,7 @@ export class VkPuppet {
 					name: groupInfo[0].name || peerId.toString(),
 					avatarUrl: groupInfo[0]?.photo_200,
 					externalUrl: `https://vk.com/${groupInfo[0].screen_name}`,
+					isDirect: true
 				};
 				break;
 			}
@@ -135,6 +137,7 @@ export class VkPuppet {
 					puppetId,
 					roomId: peerId.toString(),
 					name: peerId.toString(),
+					isDirect: true
 					// avatarUrl: info.items['chat_settings']['photo_200'],
 				};
 				break;
