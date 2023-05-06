@@ -1,4 +1,4 @@
-FROM node:alpine AS builder
+FROM node:18.4.0-alpine AS builder
 
 RUN apk --no-cache add git python3 make g++ pkgconfig \
     build-base \
@@ -26,7 +26,7 @@ COPY src/ ./src/
 RUN npm run build
 
 
-FROM node:alpine
+FROM node:18.4.0-alpine
 
 ENV CONFIG_PATH=/data/config.yaml \
     REGISTRATION_PATH=/data/vk-registration.yaml \
